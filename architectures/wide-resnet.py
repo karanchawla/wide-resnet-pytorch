@@ -3,7 +3,7 @@ import math
 import torch.nn as nn
 import torch.nn.init as init
 import torch.nn.functional as F 
-import torch.autograd
+import torch.autograd 
 
 class BasicBlock(nn.Module):
     def __init__(self, inplane, outplane, stride, dropRate=0.0):
@@ -40,7 +40,7 @@ class NetworkBlock(nn.Module):
     
     def _make_layer(self, block, in_planes, out_planes, nb_layers, stride, dropRate):
         layers = []
-        for i in range(len(nb_layers)):
+        for i in range(int(nb_layers)):
             layers.append(block(i==0 and in_planes or out_planes, out_planes, i==0 and stride or 1, dropRate))
         return nn.Sequential(*layers)
     
@@ -51,7 +51,7 @@ class WideResNet(nn.Module):
     def __init__(self, depth, num_classes, widen_factor=1, dropRate=0.0):
         super(WideResNet, self).__init__()
         nChannels = [16, 16*widen_factor, 32*widen_factor, 64*widen_factor]
-        assert((depth - 4) % 6 == 0)
+       
         n = (depth - 4) / 6
         block = BasicBlock
 
@@ -69,7 +69,6 @@ class WideResNet(nn.Module):
         self.bn1 = nn.BatchNorm2d(nChannels[3])
         self.relu = nn.ReLU(inplace=True)
         self.fc = nn.Linear(nChannels[3], num_classes)
-        self.nChannels = nChannels[3]
 
         # normal weight init
         for m in self.modules():
@@ -89,5 +88,12 @@ class WideResNet(nn.Module):
         out = self.block3(out)
         out = self.relu(self.bn1(out))
         out = F.avg_pool2d(out, 8)
-        out = out.view(-1, self.nChannels)
-        return self.fc(out)
+        out = out.view(out.size(0), -1)
+        out = self.fc(out)
+        return out
+
+if __name__ == '__main__':
+    net = WideResNet(28, 10, 10, 0.3)
+    y = net(torch.autograd.Variable(torch.randn(1,3,32,32)))
+
+    print(y.size())
